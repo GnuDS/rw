@@ -1,0 +1,7 @@
+.left li {
+    cursor:pointer;
+}
+
+.left li.active {
+    font-weight: 800;
+}
