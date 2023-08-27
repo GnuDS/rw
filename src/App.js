@@ -21,6 +21,8 @@ function App() {
     setSelectMenu(menu);
   }
 
+  isMobile = false;
+
   if(!isMobile) {
     return (
       <>
