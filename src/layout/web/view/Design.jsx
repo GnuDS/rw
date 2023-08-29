@@ -1,48 +1,89 @@
-import { useState } from "react";
-import { DataDesignList } from "../../../components/DesignList";
-import { DesignWrite } from "../../../components/DesignWrite";
-import { DesignData } from "../../../model/DesignData";
+import { useRef, useMemo, useCallback, useReducer } from "react";
+import DataDesignList from "../../../components/DesignList";
+import DesignWrite from "../../../components/DesignWrite";
+import { DesignData } from "../../../reducers/DesignData";
+import useInputs from "../../../hooks/useInputs";
+
+const initialState = {
+    designData: DesignData
+};
+
+const countActiveData = (data) => {
+    return data.filter(d => d.active).length;
+}
+
+const reducer = (state, action) => {
+    switch (action.type) {
+        case 'CREATE_DESIGN':
+            return {
+                designData: state.designData.concat(action.data)
+            };
+        case 'TOGGLE_DATA':
+            return {
+                designData: state.designData.map(d =>
+                    d.id === action.id ? { ...d, active: !d.active } : d
+                )
+            };
+        case 'REMOVE_DATA':
+            return {
+                designData: state.designData.filter(d => d.id !== action.id)
+            };
+        default:
+            return state;
+    }
+}
 
 const Design = () => {
 
-    const [ designData, setDesignData ] = useState(DesignData);
-    const [ formData, setFormData ] = useState({
-        'nm': '',
-        'site': ''
+    const [ { nm, site }, onChange, reset ] = useInputs({
+        nm: '',
+        site: ''
     });
 
-    const onChange = (e) => {
-        setFormData({...formData, [e.target.name]: e.target.value});
-    }
+    const [ state, dispatch ] = useReducer(reducer, initialState);
+    const nextId = useRef(3);
+    const { designData } = state;
 
-    const onReset = () => {
-        setFormData({'nm': '', 'site': ''});
-    };
+    const onWrite = useCallback(() => {
+        dispatch({
+            type: 'CREATE_DESIGN',
+            data: {
+                id: nextId.current,
+                nm,
+                site
+            }
+        });
+        reset();
+        nextId.current += 1;
+    }, [nm, site, reset]);
 
-    const onWrite = () => {
-        if(!formData.nm) {
-            alert('사이트명을 입력해주세요.');
-        } else if(!formData.site) {
-            alert('사이트 주소를 입력해주세요.');
-        }
+    const onToggle = useCallback(id => {
+        dispatch({
+            type: 'TOGGLE_DATA',
+            id
+        });
+    }, []);
 
-        const addData = {
-            ...formData,
-            id: designData.length + 1
-        };
+    const onRemove = useCallback(id => {
+        dispatch({
+            type: 'REMOVE_DATA',
+            id
+        });
+    }, []);
 
-        setDesignData([
-            ...designData,
-            addData
-        ]);
-    }
+    const onReset = useCallback(() => {
+        reset();
+    }, [reset]);
+
+    const count = useMemo(() => countActiveData(designData), [designData]);
 
     return (
         <div>
             <h2>Design</h2>
             <br></br>
-            <DesignWrite onChange={onChange} onWrite={onWrite} onReset={onReset} formData={formData} />
-            <DataDesignList data={designData} />
+            <DesignWrite nm={nm} site={site} onChange={onChange} onWrite={onWrite} onReset={onReset} />
+            <div>활성 디자인 수 : {count} </div>
+            <DataDesignList data={designData} onRemove={onRemove} onToggle={onToggle} />
         </div>
     );
 
